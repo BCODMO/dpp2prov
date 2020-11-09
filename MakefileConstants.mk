@@ -1,4 +1,4 @@
-service := idgenerator
+service := dpp2prov
 
 ERROR_COLOR = \033[1;31m
 INFO_COLOR = \033[1;32m
