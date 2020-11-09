@@ -93,13 +93,13 @@ check-environment-arg:
 cfn_help:                                ## print help for make (deploy|remove) targets
 	@printf "\nmake (deploy|gone)\n"
 	@printf "Usage:\n"
-	@printf "    make environment=<dpp2prov-environment> bucket=<dataset-pipelines-bucket> bcodmo-office-uri=<linked-data-uri> deploy\n"
+	@printf "    make environment=<dpp2prov-environment> bucket=<dataset-pipelines-bucket> bcodmoOfficeURI=<linked-data-uri> deploy\n"
 	@printf "\n"
 	@printf "Required:\n"
 	@printf "    environment:       dpp2prov environment, unique \"environment\" e.g. \"dev\" or \"prod\".\n"
 	@printf "    bucket:       	AWS S3 bucket where dataset pipelines can be found.\n"
 	@printf "Optional:\n"
-	@printf "    bcodmo-office-uri:	The Linked Data URI for the BCO-DMO Organization.\n"
+	@printf "    bcodmoOfficeURI:	The Linked Data URI for the BCO-DMO Organization.\n"
 	@printf "\n"
 
 .PHONY: help
