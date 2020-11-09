@@ -12,6 +12,9 @@ Parameters:
   Bucket:
     Type: String
     Description: The S3 Bucket at which pipelines can be found.
+  BcoDmoOfficeURI:
+    Type: String
+    Description: The Linked Data Identifier for the BCO-DMO Organization
 
 Resources:
   Dpp2ProvAPI:
