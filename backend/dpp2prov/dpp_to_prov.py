@@ -2,7 +2,7 @@ from datetime import datetime
 from random import randrange
 
 from yaml import load, dump
-from rdflib import Graph, Literal, RDF, URIRef, plugin
+from rdflib import BNode, Graph, Literal, RDF, URIRef, plugin
 from rdflib.namespace import XSD
 from rdflib.serializer import Serializer
 
@@ -17,27 +17,37 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     if rdf_format is None:
         rdf_format = 'turtle'
         
-    # Get the pipeline YAML file from S3
+    # Get the pipeline YAML & datapackage file from S3
     
-    # Load the pipeline YAML
+    # Load the pipeline YAML & datapackage file
+    
+    data_mgr = URIRef("")
+    generatedTime = ""
     
     # Build the provenance
-    g = Graph()
-    # Create an RDF URI node to use as the subject for multiple triples
-    donna = URIRef("http://example.org/donna")
-    # Add triples using store's add() method.
-    g.add((donna, RDF.type, FOAF.Person))
-    g.add((donna, FOAF.nick, Literal("donna", lang="ed")))
-    g.add((donna, FOAF.name, Literal("Donna Fales")))
-    g.add((donna, FOAF.mbox, URIRef("mailto:donna@example.org")))
-    # Add another person
-    ed = URIRef("http://example.org/edward")
-    # Add triples using store's add() method.
-    g.add((ed, RDF.type, FOAF.Person))
-    g.add((ed, FOAF.nick, Literal("ed", datatype=XSD.string)))
-    g.add((ed, FOAF.name, Literal("Edward Scissorhands")))
-    g.add((ed, FOAF.mbox, URIRef("mailto:e.scissorhands@example.org")))
+    g = Graph() 
+    
+    # Setup namespaces
+    dcterms = Namespace("http://purl.org/dc/terms/")
+    prov = Namespace("http://www.w3.org/ns/prov#")
+    rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+    schema = Namespace("http://schema.org/")
+    g.bind("dcterms", dcterms)
+    g.bind("prov", prov)
+    g.bind("rdfs", rdfs)
+    g.bind("schema", schema)
+    g.bind("xsd", XSD)
+    
+    # PROV
+    bundle = BNode()
+    g.add((bundle, RDF.type, "prov:Bundle"))
+    g.add((bundle, prov.wasAttributedTo, data_mgr))
+    g.add((bundle, prov.generatedAtTime Literal(generatedTime, datatype=XSD.dateTime)))
+    
+    
     
     # Send the provenance
-    return g.serialize(format='n3').decode("utf-8")
+    if rdf_format is 'json-ld':
+        return g.serialize(format='json-ld', indent=2).decode("utf-8")
+    return g.serialize(format=rdf_format).decode("utf-8")
     
