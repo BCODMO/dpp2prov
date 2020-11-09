@@ -2,7 +2,7 @@ import json
 
 import os
 
-from idgenerator.configuration import get_environment, ENVIRONMENT_VARIABLE_NAME
+from idgenerator.configuration import get_environment, get_dpp2prov_bucket_name, ENVIRONMENT_VARIABLE_NAME, BUCKET_VARIABLE_NAME
 from idgenerator.idgenerator_logging import setup_logging
 
 
@@ -28,6 +28,11 @@ def lambda_handler():
             if not get_environment():
                 logger.error(
                     f'{ENVIRONMENT_VARIABLE_NAME} environment variable missing cannot continue')
+                return aws_lambda_response(event, context, msg_type='info', msg='paused', code=503)
+            
+            if not get_dpp2prov_bucket_name():
+                logger.error(
+                    f'{BUCKET_VARIABLE_NAME} environment variable missing cannot continue')
                 return aws_lambda_response(event, context, msg_type='info', msg='paused', code=503)
 
             logger.info(f"lambda_handler.{lambda_func.__name__}")
