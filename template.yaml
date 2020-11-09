@@ -22,7 +22,7 @@ Resources:
   CreateId:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub '${Service}-${Environment}-get-id'
+      FunctionName: !Sub '${Service}-${Environment}-to-prov'
       Handler: lambda_handlers.to_prov
       Runtime: python3.7
       CodeUri: backend/
