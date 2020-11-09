@@ -41,6 +41,7 @@ deploy: build-layer sam-build check-environment-arg
 		--parameter-overrides \
 			Service=${service} \
 			Environment=$(environment) \
+			Bucket=$(bucket) \
 
 .PHONY: sam-build
 sam-build:
@@ -92,10 +93,11 @@ check-environment-arg:
 cfn_help:                                ## print help for make (deploy|remove) targets
 	@printf "\nmake (deploy|gone)\n"
 	@printf "Usage:\n"
-	@printf "    make environment=<metadataservice-environment> deploy\n"
+	@printf "    make environment=<dpp2prov-environment> bucket=<dataset-pipelines-bucket> deploy\n"
 	@printf "\n"
 	@printf "Required:\n"
-	@printf "    environment:       metadataservice environment, unique \"environment\" e.g. \"dev\" or \"prod\".\n"
+	@printf "    environment:       dpp2prov environment, unique \"environment\" e.g. \"dev\" or \"prod\".\n"
+	@printf "    bucket:       	AWS S3 bucket where dataset pipelines can be found.\n"
 	@printf "\n"
 
 .PHONY: help
