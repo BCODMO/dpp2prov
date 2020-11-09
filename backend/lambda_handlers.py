@@ -1,6 +1,6 @@
 from pyfaaster.aws.handlers_decorators import parameters, http_response
 
-from dpp2prov.dpp2prov import to_prov
+from dpp2prov.dpp_to_prov import to_prov
 from dpp2prov.dpp2prov_logging import setup_logging
 
 logger = setup_logging(__name__)
