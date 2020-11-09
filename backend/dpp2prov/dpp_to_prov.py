@@ -1,39 +1,43 @@
 from datetime import datetime
 from random import randrange
 
-from hashids import Hashids
-from idgenerator.idgenerator_logging import setup_logging
+from yaml import load, dump
+from rdflib import Graph, Literal, RDF, URIRef, plugin
+from rdflib.namespace import XSD
+from rdflib.serializer import Serializer
+
+from dpp2prov.dpp2prov_logging import setup_logging
 
 logger = setup_logging(__name__)
 
 
-def create_id(bcodmo_version=None, content_type=None, content_id=None):
-    logger.info(f'Got version, type and id: {bcodmo_version}:{content_type}:{content_id}')
-    if all([bcodmo_version, content_type, content_id]):
-        logger.info(f'Creating Drupal ID')
-        return generate_drupal_id(bcodmo_version, content_type, content_id)
-    else:
-        logger.info(f'Generating a fresh ID')
-        return generate_fresh_id()
-
-
-def generate_drupal_id(bcodmo_version, content_type, content_id):
-    """
-    >>> generate_drupal_id(1, 2, 3)
-    'o2fXhV'
-    """
-    hashids = Hashids()
-    try:
-        id = hashids.encode(int(bcodmo_version), int(content_type), int(content_id))
-    except ValueError:
-        return 'Could not generate hash id, input might not be integers'
-    return id
-
-
-def generate_fresh_id():
-    hashids = Hashids()
-    unix_timestamp = datetime.now().timestamp()
-    integer_timestamp = int(unix_timestamp * 1000000)
-    salt = randrange(1000000)
-    id = hashids.encode(integer_timestamp, salt)
-    return id
+def to_prov(dataset_id, version_id, rdf_format=None):
+    logger.info(f'Got dataset, version and RDF format: {dataset_id}:{version_id}:{rdf_format}')
+    
+    if rdf_format is None:
+        rdf_format = 'turtle'
+        
+    # Get the pipeline YAML file from S3
+    
+    # Load the pipeline YAML
+    
+    # Build the provenance
+    g = Graph()
+    # Create an RDF URI node to use as the subject for multiple triples
+    donna = URIRef("http://example.org/donna")
+    # Add triples using store's add() method.
+    g.add((donna, RDF.type, FOAF.Person))
+    g.add((donna, FOAF.nick, Literal("donna", lang="ed")))
+    g.add((donna, FOAF.name, Literal("Donna Fales")))
+    g.add((donna, FOAF.mbox, URIRef("mailto:donna@example.org")))
+    # Add another person
+    ed = URIRef("http://example.org/edward")
+    # Add triples using store's add() method.
+    g.add((ed, RDF.type, FOAF.Person))
+    g.add((ed, FOAF.nick, Literal("ed", datatype=XSD.string)))
+    g.add((ed, FOAF.name, Literal("Edward Scissorhands")))
+    g.add((ed, FOAF.mbox, URIRef("mailto:e.scissorhands@example.org")))
+    
+    # Send the provenance
+    return g.serialize(format='n3').decode("utf-8")
+    
