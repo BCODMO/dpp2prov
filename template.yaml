@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: BCO-DMO Frictionlessdata Data Package Pipeline
+
+Parameters:
+  Service:
+    Type: String
+    Description: The name of the service that we are deploying
+  Environment:
+    Type: String
+    Description: Environment to which we are deploying (prod, stage, dev, etc)
+
+Resources:
+  Dpp2ProvAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true # sets for all methods
+        UsagePlan:
+          CreateUsagePlan: SHARED
+  CreateId:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Service}-${Environment}-get-id'
+      Handler: lambda_handlers.to_prov
+      Runtime: python3.7
+      CodeUri: backend/
+      MemorySize: 3008
+      Timeout: 900
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          LOG_LEVEL: INFO
+      Events:
+        HttpGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref IdGeneratorAPI
+            Path: '/prov'
+            Method: get
