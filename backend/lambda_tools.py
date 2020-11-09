@@ -2,8 +2,8 @@ import json
 
 import os
 
-from idgenerator.configuration import get_environment, get_dpp2prov_bucket_name, ENVIRONMENT_VARIABLE_NAME, BUCKET_VARIABLE_NAME
-from idgenerator.idgenerator_logging import setup_logging
+from dpp2prov.configuration import get_environment, get_dpp2prov_bucket_name, ENVIRONMENT_VARIABLE_NAME, BUCKET_VARIABLE_NAME
+from dpp2prov.dpp2prov_logging import setup_logging
 
 
 def lambda_handler():
