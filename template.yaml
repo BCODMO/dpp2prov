@@ -9,6 +9,9 @@ Parameters:
   Environment:
     Type: String
     Description: Environment to which we are deploying (prod, stage, dev, etc)
+  Bucket:
+    Type: String
+    Description: The S3 Bucket at which pipelines can be found.
 
 Resources:
   Dpp2ProvAPI:
