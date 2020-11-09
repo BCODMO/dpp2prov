@@ -1,0 +1,17 @@
+# Python files
+.venv
+__pycache__
+.pytest_cache
+
+# Configuration files
+envs/*
+
+# Build
+.aws-sam
+package*
+
+# Cloudformation Artifacts
+packaged-template.yaml
+
+# Data
+listings_cache
