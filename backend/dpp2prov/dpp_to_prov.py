@@ -30,24 +30,23 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     # Get the pipeline YAML & datapackage file from S3
     
     # Load the pipeline YAML & datapackage file
-
-    # S3 object created/lastmodified
-    generatedTime = ""
-    
-    # Data Manager
-    orcid = ""
-    name = ""
-    data_mgr = get_data_mgr_uri(orcid)
     
     # Build the provenance
     g = Graph() 
     
+    # Data Manager
+    orcid = ""
+    data_mgr = get_data_mgr_resource(g, orcid)
+
     # Setup namespaces
     g.bind("dcterms", dcterms)
     g.bind("prov", prov)
     g.bind("rdfs", rdfs)
     g.bind("schema", schema)
     g.bind("xsd", XSD)
+    
+    # S3 object created/lastmodified
+    generatedTime = ""
     
     # PROV
     bundle = BNode()
@@ -56,22 +55,33 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((bundle, prov.generatedAtTime Literal(generatedTime, datatype=XSD.dateTime)))
     
     pipeline_spec = BNode()
-    raw_data = BNode()
+    g.add((pipeline_spec, rdfs.isDefinedBy, bundle))
+    g.add((pipeline_spec, RDF.type, prov.Plan))
+    g.add((pipeline_spec, RDF.type, schema.DigitalDocument))
+    g.add((pipeline_spec, prov.wasAttributedTo, data_mgr))
+    g.add((pipeline_spec, prov.wasAttributedTo, data_mgr))
     
+
+  schema:name                     "lat_lon_DDM_to_DD"^^xsd:string ;
+  schema:headline                 "lat_lon_DDM_to_DD"^^xsd:string ;
+  schema:description              "Add lat & lon columns in decimal degrees (DD) given one column with lat & lon in format degrees decimal minutes (DDM)."@en-US ;
+  schema:contentUrl               "https://example.org/dataset/1234/v1/pipeline-spec.yaml"^^xsd:anyURI ;
+  schema:encodingFormat           "application/x-yaml"^^xsd:string ;
+ 
     created_pipeline = BNode()
-    g.add((created_pipeline, RDF.type, prov.Activity))
     g.add((created_pipeline, rdfs.isDefinedBy, bundle))
+    g.add((created_pipeline, RDF.type, prov.Activity))
     g.add((created_pipeline, prov.generated, pipeline_spec))
-    g.add((created_pipeline, prov.used, raw_data))
     qualified_creation = BNode()
-    g.add((executed_pipeline, prov.qualifiedAssociation, qualified_creation))
+    g.add((created_pipeline, prov.qualifiedAssociation, qualified_creation))
     g.add((qualified_creation, prov.agent, data_mgr)) 
     g.add((qualified_creation, prov.hadRole, odo.BcoDmoDataManagerRole))
     g.add((qualified_creation, prov.hadPlan, pipeline_spec)) 
+    g.add((pipeline_spec, prov.wasGeneratedBy, created_pipeline))
 
     executed_pipeline = BNode()
-    g.add((executed_pipeline, RDF.type, prov.Activity))
     g.add((executed_pipeline, rdfs.isDefinedBy, bundle))
+    g.add((executed_pipeline, RDF.type, prov.Activity))
     g.add((executed_pipeline, prov.hadPlan, pipeline_spec))
     qualified_execution = BNode()
     g.add((executed_pipeline, prov.qualifiedAssociation, qualified_execution))
@@ -80,22 +90,23 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((qualified_execution, prov.hadPlan, pipeline_spec)) 
           
     dm_delegation = BNode()
+    g.add((dm_delegation, rdfs.isDefinedBy, bundle))
     g.add((data_mgr, RDF.type, prov.Person))
     g.add((data_mgr, prov:qualifiedDelegation, dm_delegation))
     g.add((dm_delegation, RDF.type, prov.Delegation))
-    g.add((dm_delegation, rdfs.isDefinedBy, bundle))
     g.add((dm_delegation, prov.agent, bcodmo_office))
     g.add((dm_delegation, prov.hadRole, odo.BcoDmoDataManagerRole))
     g.add((dm_delegation, prov.hadActivity, created_pipeline))
     g.add((dm_delegation, prov.hadActivity, executed_pipeline))
     
+    raw_data = BNode()
+    g.add((raw_data, rdfs.isDefinedBy, bundle))
     g.add((raw_data, RDF.type, prov.Entity))
     g.add((raw_data, RDF.type, schema.Dataset))
-    g.add((raw_data, rdfs.isDefinedBy, bundle))
     raw_data_distro = BNode()
     g.add((raw_data, schema.distribution, bundle))
     g.add((raw_data_distro, RDF.type, schema.DataDownload))
-    
+    g.add((created_pipeline, prov.used, raw_data))
     # From load step
     raw_data_url = ""
     g.add((raw_data_distro, schema.contentUrl, Literal(raw_data_url, datatype=XSD.anyURI))
@@ -110,20 +121,23 @@ def to_prov(dataset_id, version_id, rdf_format=None):
 
 
 # get the RDF resource for a Data Manager by the given ORCID
-def get_data_mgr_uri(orcid):
-    dm_lookup_url = "https://lod.bco-dmo.org/sparql?query=PREFIX+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX+rdfs%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0APREFIX+owl%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23%3E%0D%0APREFIX+arpfo%3A+%3Chttp%3A%2F%2Fvocab.ox.ac.uk%2Fprojectfunding%23%3E%0D%0APREFIX+dc%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Felements%2F1.1%2F%3E%0D%0APREFIX+dcat%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fdcat%23%3E%0D%0APREFIX+dcterms%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Fterms%2F%3E%0D%0APREFIX+foaf%3A+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2F%3E%0D%0APREFIX+geo%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2003%2F01%2Fgeo%2Fwgs84_pos%23%3E%0D%0APREFIX+geosparql%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fgeosparql%23%3E%0D%0APREFIX+odo%3A+%3Chttp%3A%2F%2Focean-data.org%2Fschema%2F%3E%0D%0APREFIX+participation%3A+%3Chttp%3A%2F%2Fpurl.org%2Fvocab%2Fparticipation%2Fschema%23%3E%0D%0APREFIX+prov%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fprov%23%3E%0D%0APREFIX+rs%3A+%3Chttp%3A%2F%2Fjena.hpl.hp.com%2F2003%2F03%2Fresult-set%23%3E%0D%0APREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0D%0APREFIX+sd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fsparql-service-description%23%3E%0D%0APREFIX+sf%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fsf%23%3E%0D%0APREFIX+skos%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2004%2F02%2Fskos%2Fcore%23%3E%0D%0APREFIX+time%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2006%2Ftime%23%3E%0D%0APREFIX+void%3A+%3Chttp%3A%2F%2Frdfs.org%2Fns%2Fvoid%23%3E%0D%0APREFIX+xsd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23%3E%0D%0ASELECT+DISTINCT+%3Fperson+WHERE+%7B+%3Fperson+odo%3Aidentifier+%3Fid+.+%3Fid+odo%3AidentifierScheme+odo%3AIdentifierScheme_ORCID+.+%3Fid+odo%3AidentifierValue+%22" + orcid + "%22%5E%5Exsd%3Atoken+%7D&output=json"
-    dm_response = requests.get(dm_lookup_url)
-    dm_sparql_results = dm_response.json()
-    dm = None
-    for result in dm_sparql_results['results']['bindings']:
-        return URIRef(result['person']['value'])
-    # return BNode is no DM was found
-    return BNode() 
+def get_data_mgr_resource(graph, orcid):
+    has_orcid = orcid is not None and len(orcid) > 0:
+        dm_lookup_url = "https://lod.bco-dmo.org/sparql?query=PREFIX+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX+rdfs%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0APREFIX+owl%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23%3E%0D%0APREFIX+arpfo%3A+%3Chttp%3A%2F%2Fvocab.ox.ac.uk%2Fprojectfunding%23%3E%0D%0APREFIX+dc%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Felements%2F1.1%2F%3E%0D%0APREFIX+dcat%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fdcat%23%3E%0D%0APREFIX+dcterms%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Fterms%2F%3E%0D%0APREFIX+foaf%3A+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2F%3E%0D%0APREFIX+geo%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2003%2F01%2Fgeo%2Fwgs84_pos%23%3E%0D%0APREFIX+geosparql%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fgeosparql%23%3E%0D%0APREFIX+odo%3A+%3Chttp%3A%2F%2Focean-data.org%2Fschema%2F%3E%0D%0APREFIX+participation%3A+%3Chttp%3A%2F%2Fpurl.org%2Fvocab%2Fparticipation%2Fschema%23%3E%0D%0APREFIX+prov%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fprov%23%3E%0D%0APREFIX+rs%3A+%3Chttp%3A%2F%2Fjena.hpl.hp.com%2F2003%2F03%2Fresult-set%23%3E%0D%0APREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0D%0APREFIX+sd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fsparql-service-description%23%3E%0D%0APREFIX+sf%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fsf%23%3E%0D%0APREFIX+skos%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2004%2F02%2Fskos%2Fcore%23%3E%0D%0APREFIX+time%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2006%2Ftime%23%3E%0D%0APREFIX+void%3A+%3Chttp%3A%2F%2Frdfs.org%2Fns%2Fvoid%23%3E%0D%0APREFIX+xsd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23%3E%0D%0ASELECT+DISTINCT+%3Fperson+WHERE+%7B+%3Fperson+odo%3Aidentifier+%3Fid+.+%3Fid+odo%3AidentifierScheme+odo%3AIdentifierScheme_ORCID+.+%3Fid+odo%3AidentifierValue+%22" + orcid + "%22%5E%5Exsd%3Atoken+%7D&output=json"
+        dm_response = requests.get(dm_lookup_url)
+        dm_sparql_results = dm_response.json()
 
-# create an identifier for a resource
-def assign_identifier(graph, resource, identifierValue, identifierScheme):
-    id = BNode()
-    graph.add((resource, odo.identifier, id))
-    graph.add((id, RDF.type, odo.Identifier))
-    graph.add((id, odo.identifierScheme, identifierScheme))
-    graph.add((id, odo.identifierValue, Literal(identifierValue, datatype=XSD.token)))
+        for result in dm_sparql_results['results']['bindings']:
+            return URIRef(result['person']['value'])
+          
+    # return BNode is no DM was found
+    dm = BNode() 
+    # add the associated ORCID to the DM bnode
+    if has_orcid:
+        id = BNode()
+        graph.add((dm, odo.identifier, id))
+        graph.add((id, RDF.type, odo.Identifier))
+        graph.add((id, odo.identifierScheme, odo.IdentifierScheme_ORCID))
+        graph.add((id, odo.identifierValue, Literal(orcid, datatype=XSD.token)))
+          
+    return dm
