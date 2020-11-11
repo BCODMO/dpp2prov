@@ -42,6 +42,7 @@ deploy: build-layer sam-build check-environment-arg
 			Service=${service} \
 			Environment=$(environment) \
 			Bucket=$(bucket) \
+			BcoDmoOfficeURI=$(bcodmoOfficeURI) \
 
 .PHONY: sam-build
 sam-build:
