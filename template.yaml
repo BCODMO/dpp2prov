@@ -25,7 +25,7 @@ Resources:
         ApiKeyRequired: true # sets for all methods
         UsagePlan:
           CreateUsagePlan: SHARED
-  CreateId:
+  ToProv:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub '${Service}-${Environment}-to-prov'
@@ -44,6 +44,6 @@ Resources:
         HttpGet:
           Type: Api
           Properties:
-            RestApiId: !Ref IdGeneratorAPI
+            RestApiId: !Ref Dpp2ProvAPI
             Path: '/prov'
             Method: get
