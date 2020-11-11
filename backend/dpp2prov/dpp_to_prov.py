@@ -82,7 +82,6 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     pipeline_spec = BNode()
     g.add((pipeline_spec, rdfs.isDefinedBy, bundle))
     g.add((pipeline_spec, RDF.type, prov.Plan))
-    g.add((pipeline_spec, RDF.type, prov.Collection))
     g.add((pipeline_spec, RDF.type, schema.DigitalDocument))
     g.add((pipeline_spec, schema.name, Literal(pipeline_name, datatype=XSD.string)))
     g.add((pipeline_spec, schema.description, Literal(pipeline_desc, datatype=XSD.string)))
