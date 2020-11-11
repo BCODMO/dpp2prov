@@ -1,6 +1,3 @@
-from datetime import datetime
-from random import randrange
-
 from yaml import load, dump
 from rdflib import BNode, Graph, Literal, RDF, URIRef, plugin
 from rdflib.namespace import XSD
@@ -50,6 +47,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     pipeline_name = ""
     pipeline_desc = ""
     pipeline_url = ""
+    data_pkg_url = ""
     
     # PROV
     bundle = BNode()
@@ -65,7 +63,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((pipeline_spec, schema.name, Literal(pipeline_name, datatype=XSD.string)))
     g.add((pipeline_spec, schema.description, Literal(pipeline_desc, datatype=XSD.string)))
     g.add((pipeline_spec, schema.contentUrl, Literal(pipeline_url, datatype=XSD.anyURI)))
-    g.add((pipeline_spec, schema.contentUrl, Literal("application/x-yaml", datatype=XSD.token)))
+    g.add((pipeline_spec, schema.encodingFormat, Literal("application/x-yaml", datatype=XSD.token)))
  
     created_pipeline = BNode()
     g.add((created_pipeline, rdfs.isDefinedBy, bundle))
@@ -110,8 +108,24 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     raw_data_url = ""
     g.add((raw_data_distro, schema.contentUrl, Literal(raw_data_url, datatype=XSD.anyURI))
 
+    data_pkg = BNode()
+    g.add((data_pkg, rdfs.isDefinedBy, bundle))
+    g.add((data_pkg, RDF.type, prov.Entity))
+    g.add((data_pkg, RDF.type, schema.DigitalDocument))
+    g.add((data_pkg, prov.wasGeneratedBy, executed_pipeline))
+    g.add((data_pkg, schema.contentUrl, Literal(data_pkg_url, datatype=XSD.anyURI)))
+    g.add((data_pkg, schema.encodingFormat, Literal("application/json", datatype=XSD.token)))
+
+    new_data = BNode()
+    g.add((new_data, rdfs.isDefinedBy, bundle))
+    g.add((new_data, RDF.type, prov.Entity))
+    g.add((new_data, RDF.type, schema.DataDownload))
+    g.add((new_data, prov.wasGeneratedBy, executed_pipeline))
+    g.add((new_data, prov.hadPrimarySource, raw_data))
+    g.add((new_data, prov.wasDerivedFrom, raw_data))
+    g.add((new_data, schema.contentUrl, Literal(new_data_url, datatype=XSD.anyURI)))
+    g.add((new_data, schema.encodingFormat, Literal("text/csv", datatype=XSD.token)))
           
-  
     
     # Send the provenance
     if rdf_format is 'json-ld':
