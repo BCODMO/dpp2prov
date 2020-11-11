@@ -37,6 +37,8 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
+          BUCKET: !Ref Bucket
+          BCODMOOFFICEURI: !Ref BcoDmoOfficeURI
           LOG_LEVEL: INFO
       Events:
         HttpGet:
