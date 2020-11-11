@@ -47,6 +47,9 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     
     # S3 object created/lastmodified
     generatedTime = ""
+    pipeline_name = ""
+    pipeline_desc = ""
+    pipeline_url = ""
     
     # PROV
     bundle = BNode()
@@ -59,14 +62,10 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((pipeline_spec, RDF.type, prov.Plan))
     g.add((pipeline_spec, RDF.type, schema.DigitalDocument))
     g.add((pipeline_spec, prov.wasAttributedTo, data_mgr))
-    g.add((pipeline_spec, prov.wasAttributedTo, data_mgr))
-    
-
-  schema:name                     "lat_lon_DDM_to_DD"^^xsd:string ;
-  schema:headline                 "lat_lon_DDM_to_DD"^^xsd:string ;
-  schema:description              "Add lat & lon columns in decimal degrees (DD) given one column with lat & lon in format degrees decimal minutes (DDM)."@en-US ;
-  schema:contentUrl               "https://example.org/dataset/1234/v1/pipeline-spec.yaml"^^xsd:anyURI ;
-  schema:encodingFormat           "application/x-yaml"^^xsd:string ;
+    g.add((pipeline_spec, schema.name, Literal(pipeline_name, datatype=XSD.string)))
+    g.add((pipeline_spec, schema.description, Literal(pipeline_desc, datatype=XSD.string)))
+    g.add((pipeline_spec, schema.contentUrl, Literal(pipeline_url, datatype=XSD.anyURI)))
+    g.add((pipeline_spec, schema.contentUrl, Literal("application/x-yaml", datatype=XSD.token)))
  
     created_pipeline = BNode()
     g.add((created_pipeline, rdfs.isDefinedBy, bundle))
