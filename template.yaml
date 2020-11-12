@@ -32,8 +32,9 @@ Resources:
       Handler: lambda_handlers.to_prov
       Runtime: python3.7
       CodeUri: backend/
-      Policies:
-      - dpp2prov
+       Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref Bucket
       MemorySize: 3008
       Timeout: 900
       Environment:
