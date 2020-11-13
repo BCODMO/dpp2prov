@@ -11,4 +11,4 @@ logger = setup_logging(__name__)
 def to_prov(event, context, dataset_id, version_id, rdf_format=None):
     """
     """
-    return {'body': {'id': to_prov(dataset_id, version_id, rdf_format)} }
+    return {'body': {'prov': to_prov(dataset_id, version_id, rdf_format=rdf_format)} }

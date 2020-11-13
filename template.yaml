@@ -12,6 +12,9 @@ Parameters:
   Bucket:
     Type: String
     Description: The S3 Bucket at which pipelines can be found.
+  BucketRegion:
+    Type: String
+    Description: The AWS region for the S3 Bucket of pipelines.
   BcoDmoOfficeURI:
     Type: String
     Description: The Linked Data Identifier for the BCO-DMO Organization
@@ -30,9 +33,9 @@ Resources:
     Properties:
       FunctionName: !Sub '${Service}-${Environment}-to-prov'
       Handler: lambda_handlers.to_prov
-      Runtime: python3.7
+      Runtime: python3.8
       CodeUri: backend/
-       Policies:
+      Policies:
         - S3ReadPolicy:
             BucketName: !Ref Bucket
       MemorySize: 3008
@@ -41,6 +44,7 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref Environment
           BUCKET: !Ref Bucket
+          BUCKET_REGION: !Ref BucketRegion
           BCODMOOFFICEURI: !Ref BcoDmoOfficeURI
           LOG_LEVEL: INFO
       Events:

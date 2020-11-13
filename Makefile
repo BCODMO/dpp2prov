@@ -25,6 +25,19 @@ $(PYTHON_VERIFICATION_FILE):
 		exit 1 ; \
 	fi
 
+.PHONY: local
+deploy: build-layer sam-build check-environment-arg
+	ENABLE_LAMBDA_EXTENSIONS_PREVIEW=1 sam local invoke \
+		--s3-bucket ${service}-deployment \
+		--stack-name ${service}-$(environment) \
+		--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+		--profile $(awsProfile) \
+		--parameter-overrides \
+					Service=${service} \
+					Environment=$(environment) \
+					Bucket=$(bucket) \
+					BucketRegion=$(region) \
+					BcoDmoOfficeURI=$(bcodmoOfficeURI) \
 
 #################
 #
@@ -38,19 +51,24 @@ deploy: build-layer sam-build check-environment-arg
 		--s3-bucket ${service}-deployment \
 		--stack-name ${service}-$(environment) \
 		--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+		--profile $(awsProfile) \
 		--parameter-overrides \
-			Service=${service} \
-			Environment=$(environment) \
-			Bucket=$(bucket) \
-			BcoDmoOfficeURI=$(bcodmoOfficeURI) \
+					Service=${service} \
+					Environment=$(environment) \
+					Bucket=$(bucket) \
+					BucketRegion=$(region) \
+					BcoDmoOfficeURI=$(bcodmoOfficeURI) \
 
 .PHONY: sam-build
 sam-build:
-	sam build
+	sam build --use-container
 
+# target only runs when requirements.txt is newer than package folder
+PACKAGE_FOLDER := package
 .PHONY: build-layer
-build-layer:
-	rm -rf package && \
+build-layer: $(PACKAGE_FOLDER)
+$(PACKAGE_FOLDER): backend/requirements.txt    ## install requirements into $(PACKAGE_FOLDER) when requirements.txt is newer than the folder
+	rm -rf $(PACKAGE_FOLDER)
 	pip install --target package/python -r backend/requirements.txt
 
 
@@ -94,12 +112,13 @@ check-environment-arg:
 cfn_help:                                ## print help for make (deploy|remove) targets
 	@printf "\nmake (deploy|gone)\n"
 	@printf "Usage:\n"
-	@printf "    make environment=<dpp2prov-environment> bucket=<dataset-pipelines-bucket> bcodmoOfficeURI=<linked-data-uri> deploy\n"
+	@printf "    make awsprofile=<aws-profile> environment=<dpp2prov-environment> bucket=<dataset-pipelines-bucket> region=<region-for-bucket> bcodmoOfficeURI=<linked-data-uri> deploy\n"
 	@printf "\n"
 	@printf "Required:\n"
+	@printf "    awsProfile:        The AWS credentials profile to deploy from.\n"
 	@printf "    environment:       dpp2prov environment, unique \"environment\" e.g. \"dev\" or \"prod\".\n"
-	@printf "    bucket:       	AWS S3 bucket where dataset pipelines can be found.\n"
-	@printf "Optional:\n"
+	@printf "    bucket:            AWS S3 bucket where dataset pipelines can be found.\n"
+	@printf "    region:            The AWS region for the S3 bucket of dataset pipelines.\n"
 	@printf "    bcodmoOfficeURI:	The Linked Data URI for the BCO-DMO Organization.\n"
 	@printf "\n"
 

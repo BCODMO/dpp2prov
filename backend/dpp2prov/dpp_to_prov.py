@@ -6,9 +6,10 @@ from rdflib.namespace import XSD
 from rdflib.serializer import Serializer
 from requests import get
 import simplejson as json
+import sparql
 from yaml import safe_load, dump
 
-from dpp2prov.configuration import get_bcodmo_office_uri, get_dpp2prov_bucket_name
+from dpp2prov.configuration import get_bcodmo_office_uri, get_pipelines_bucket
 from dpp2prov.dpp2prov_logging import setup_logging
 
 # Setup logger
@@ -27,10 +28,10 @@ redmine = Namespace(redmine_uri)
 
 def to_prov(dataset_id, version_id, rdf_format=None):
     logger.info(f'Got dataset, version and RDF format: {dataset_id}:{version_id}:{rdf_format}')
-    
+
     if rdf_format is None:
         rdf_format = 'turtle'
-        
+
     g = Graph()
     # Setup namespaces
     g.bind("dcterms", dcterms)
@@ -43,32 +44,32 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     # Establish the BCO-DMO URI
     bcodmo_office_uri = get_bcodmo_office_uri()
     bcodmo_office = URIRef(bcodmo_office_uri)
-        
+
     # Prepare the S3 object names
-    bucket = get_dpp2prov_bucket_name()
+    bucket_cfg = get_pipelines_bucket()
     root_path = dataset_id + "/" + version_id + "/data/"
     pipeline_path = root_path + "pipeline-spec.yaml"
     data_pkg_path = root_path + "datapackage.json"
     pipeline_url = "s3://" + bucket + "/" + pipeline_path
     data_pkg_url = "s3://" + bucket + "/" + data_pkg_path
-    
+
     # Establish an S3 session
     session = Session(
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
     )
-    s3 = session.resource('s3')
+    s3 = session.resource('s3', region=bucket_cfg['region'])
 
     # Load the pipeline YAML
     workflow = None
-    yaml_file = get_s3_object(s3, bucket, pipeline_path)
+    yaml_file = get_s3_object(s3, bucket_cfg['bucket'], pipeline_path)
     generatedTime = yaml_file['last_modified']
     yaml_data = safe_load(yaml_file['data'])
 
     # ignore the name of the pipeline
     for key, workflow in yaml_data.items():
         break
-    
+
     pipeline_name = workflow['title']
     pipeline_desc = workflow['description']
 
@@ -87,7 +88,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((pipeline_spec, schema.description, Literal(pipeline_desc, datatype=XSD.string)))
     g.add((pipeline_spec, schema.contentUrl, Literal(pipeline_url, datatype=XSD.anyURI)))
     g.add((pipeline_spec, schema.encodingFormat, Literal("application/x-yaml", datatype=XSD.token)))
-    
+
     # Look for the Data Manager in the properties of the workflow, just in case
     data_mgr = find_data_mgr(workflow, g, bundle)
 
@@ -163,7 +164,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((dm_delegation, prov.hadRole, odo.BcoDmoDataManagerRole))
     g.add((dm_delegation, prov.hadActivity, created_pipeline))
     g.add((dm_delegation, prov.hadActivity, executed_pipeline))
-    
+
     # Keep track of last step so we can preserve the order
     last_step = None
     for order, step in enumerate(workflow['pipeline']):
@@ -214,8 +215,8 @@ def to_prov(dataset_id, version_id, rdf_format=None):
     g.add((data_pkg, prov.wasAttributedTo, data_mgr))
     g.add((data_pkg, schema.contentUrl, Literal(data_pkg_url, datatype=XSD.anyURI)))
     g.add((data_pkg, schema.encodingFormat, Literal("application/json", datatype=XSD.token)))
-    
-    fdp = get_s3_object(s3, bucket, data_pkg_path)
+
+    fdp = get_s3_object(s3, bucket_cfg['bucket'], data_pkg_path)
     fdp_json = json.loads(fdp['data'])
 
     package = Package(fdp_json)
@@ -246,7 +247,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
             g.add((new_data, prov.wasRevisionOf, raw_data))
 
     # Send the provenance
-    if rdf_format is 'json-ld':
+    if rdf_format == 'json-ld':
         return g.serialize(format='json-ld', indent=2).decode("utf-8")
     return g.serialize(format=rdf_format).decode("utf-8")
 
@@ -273,13 +274,19 @@ def find_data_mgr(data_dict, graph, bundle):
 # get the RDF resource for a Data Manager by the given ORCID
 def get_data_mgr_resource(graph, bundle, orcid, name=None):
     has_orcid = orcid is not None and len(orcid) > 0
-    dm_lookup_url = "https://lod.bco-dmo.org/sparql?query=PREFIX+rdf%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX+rdfs%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0APREFIX+owl%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23%3E%0D%0APREFIX+arpfo%3A+%3Chttp%3A%2F%2Fvocab.ox.ac.uk%2Fprojectfunding%23%3E%0D%0APREFIX+dc%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Felements%2F1.1%2F%3E%0D%0APREFIX+dcat%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fdcat%23%3E%0D%0APREFIX+dcterms%3A+%3Chttp%3A%2F%2Fpurl.org%2Fdc%2Fterms%2F%3E%0D%0APREFIX+foaf%3A+%3Chttp%3A%2F%2Fxmlns.com%2Ffoaf%2F0.1%2F%3E%0D%0APREFIX+geo%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2003%2F01%2Fgeo%2Fwgs84_pos%23%3E%0D%0APREFIX+geosparql%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fgeosparql%23%3E%0D%0APREFIX+odo%3A+%3Chttp%3A%2F%2Focean-data.org%2Fschema%2F%3E%0D%0APREFIX+participation%3A+%3Chttp%3A%2F%2Fpurl.org%2Fvocab%2Fparticipation%2Fschema%23%3E%0D%0APREFIX+prov%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fprov%23%3E%0D%0APREFIX+rs%3A+%3Chttp%3A%2F%2Fjena.hpl.hp.com%2F2003%2F03%2Fresult-set%23%3E%0D%0APREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0D%0APREFIX+sd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2Fns%2Fsparql-service-description%23%3E%0D%0APREFIX+sf%3A+%3Chttp%3A%2F%2Fwww.opengis.net%2Font%2Fsf%23%3E%0D%0APREFIX+skos%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2004%2F02%2Fskos%2Fcore%23%3E%0D%0APREFIX+time%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2006%2Ftime%23%3E%0D%0APREFIX+void%3A+%3Chttp%3A%2F%2Frdfs.org%2Fns%2Fvoid%23%3E%0D%0APREFIX+xsd%3A+%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23%3E%0D%0ASELECT+DISTINCT+%3Fperson+WHERE+%7B+%3Fperson+odo%3Aidentifier+%3Fid+.+%3Fid+odo%3AidentifierScheme+odo%3AIdentifierScheme_ORCID+.+%3Fid+odo%3AidentifierValue+%22" + orcid + "%22%5E%5Exsd%3Atoken+%7D&output=json"
-    dm_response = get(dm_lookup_url, verify=False)
-    dm_sparql_results = dm_response.json()
 
-    for result in dm_sparql_results['results']['bindings']:
-        # return the first one
-        return URIRef(result['person']['value'])
+    query = ('SELECT DISTINCT ?id WHERE { ',
+             '?id a foaf:Person . '
+             '?id odo:identifier ?orcid . '
+             '?orcid odo:identifierScheme odo:IdentifierScheme_ORCID . '
+             '?orcid odo:identifierValue ?oid . '
+             'FILTER (STR(?oid) = "' + orcid + '") '
+            '}')
+    endpoint = "https://lod.bco-dmo.org/sparql"
+    result = sparql.query(endpoint, query)
+    for row in result:
+        values = sparql.unpack_row(row)
+        return URIRef(values[0])
 
     # return BNode is no DM was found
     dm = BNode()
