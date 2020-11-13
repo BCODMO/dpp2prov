@@ -25,19 +25,6 @@ $(PYTHON_VERIFICATION_FILE):
 		exit 1 ; \
 	fi
 
-.PHONY: local
-deploy: build-layer sam-build check-environment-arg
-	ENABLE_LAMBDA_EXTENSIONS_PREVIEW=1 sam local invoke \
-		--s3-bucket ${service}-deployment \
-		--stack-name ${service}-$(environment) \
-		--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-		--profile $(awsProfile) \
-		--parameter-overrides \
-					Service=${service} \
-					Environment=$(environment) \
-					Bucket=$(bucket) \
-					BucketRegion=$(region) \
-					BcoDmoOfficeURI=$(bcodmoOfficeURI) \
 
 #################
 #
