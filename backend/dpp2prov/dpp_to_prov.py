@@ -26,7 +26,7 @@ schema = Namespace("http://schema.org/")
 odo = Namespace("http://ocean-data.org/schema/")
 redmine = Namespace(redmine_uri)
 
-def to_prov(dataset_id, version_id, rdf_format=None):
+def generate_prov(dataset_id, version_id, rdf_format=None):
     logger.info(f'Got dataset, version and RDF format: {dataset_id}:{version_id}:{rdf_format}')
 
     if rdf_format is None:
@@ -34,6 +34,7 @@ def to_prov(dataset_id, version_id, rdf_format=None):
 
     g = Graph()
     # Setup namespaces
+    g.bind("odo", odo)
     g.bind("dcterms", dcterms)
     g.bind("prov", prov)
     g.bind("plan", plan)
@@ -47,18 +48,16 @@ def to_prov(dataset_id, version_id, rdf_format=None):
 
     # Prepare the S3 object names
     bucket_cfg = get_pipelines_bucket()
+    logger.info('Got bucket & region: ' + bucket_cfg['bucket'] + ' in ' + bucket_cfg['region'])
     root_path = dataset_id + "/" + version_id + "/data/"
     pipeline_path = root_path + "pipeline-spec.yaml"
     data_pkg_path = root_path + "datapackage.json"
-    pipeline_url = "s3://" + bucket + "/" + pipeline_path
-    data_pkg_url = "s3://" + bucket + "/" + data_pkg_path
+    pipeline_url = "s3://" + bucket_cfg['bucket'] + "/" + pipeline_path
+    data_pkg_url = "s3://" + bucket_cfg['bucket'] + "/" + data_pkg_path
 
     # Establish an S3 session
-    session = Session(
-        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-    )
-    s3 = session.resource('s3', region=bucket_cfg['region'])
+    session = Session(region_name=bucket_cfg['region'])
+    s3 = session.resource('s3')
 
     # Load the pipeline YAML
     workflow = None
@@ -280,10 +279,13 @@ def get_data_mgr_resource(graph, bundle, orcid, name=None):
              '?id odo:identifier ?orcid . '
              '?orcid odo:identifierScheme odo:IdentifierScheme_ORCID . '
              '?orcid odo:identifierValue ?oid . '
-             'FILTER (STR(?oid) = "' + orcid + '") '
+             'FILTER (STR(?oid) = "'
+             + orcid
+             + '") '
             '}')
+    qs = ''.join(query)
     endpoint = "https://lod.bco-dmo.org/sparql"
-    result = sparql.query(endpoint, query)
+    result = sparql.query(endpoint, qs)
     for row in result:
         values = sparql.unpack_row(row)
         return URIRef(values[0])
